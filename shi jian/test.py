@@ -7,6 +7,7 @@ import imageio
 ## 输出图显示中文
 from matplotlib.font_manager import FontProperties
 fonts = FontProperties(fname = "/System/Library/Fonts/Apple Symbols.ttf")
+from PIL import Image
 # import re
 # import string
 # import copy
@@ -22,6 +23,7 @@ import torch.utils.data as Data
 from jieba.analyse import *
 # import jieba
 import synonyms
+import gradio as gr
 
 #logging.basicConfig(level=logging.DEBUG)
 #jieba.setLogLevel(logging.INFO)
@@ -37,6 +39,7 @@ def Wordcloud(word_dict):  #词云图
     plt.show
     
     word_cloud.to_file('词云图.png')  #导出图片
+    return word_cloud
 
 def similar_cal(sentence):
   summ=0.0
@@ -52,25 +55,38 @@ def write_food(content):
   Note=open('food_safe.txt',mode='a')
   Note.write(content+'\n') 
   Note.close()
-with open('data/news.txt',encoding='utf-8') as file:
-  texts=file.read()
-  texts=texts.split('\n')
-for line in texts:
-  text=line
-  a=extract_tags(text, topK = 6, withWeight = True, allowPOS = ())
-  flag=0.3
-  res=similar_cal(a)
-  print(res)
-  if res<flag:
-    print("非食品安全新闻")
-  else:
-    print("食品安全新闻")
-    write_food(line)
+
+def text_deal(textpath):
+  with open(textpath,encoding='utf-8') as file:
+    texts=file.read()
+    texts=texts.split('\n')
+  for line in texts:
+    text=line
+    a=extract_tags(text, topK = 6, withWeight = True, allowPOS = ())
+    flag=0.3
+    res=similar_cal(a)
+    print(res)
+    if res<flag:
+      print("非食品安全新闻")
+    else:
+      print("食品安全新闻")
+      write_food(line)
+      
+  with open('food_safe.txt',encoding='utf-8') as file:
+    final_news=file.read()
+    #final_news=final_news.split('\n')
+    a=extract_tags(final_news, topK = 11, withWeight = True, allowPOS = ())
     word_dict = {} #转化为字典形式以便做词云图
     for i in a:
-      word_dict[i[0]]=i[1]
-        
+      word_dict[i[0]]=i[1]         
     print(word_dict)
-    Wordcloud(word_dict)
+    wcd=Wordcloud(word_dict)
+    wcd.to_file('ciyuntu.jpg')
+    picw=np.array(Image.open('ciyuntu.jpg'))
+  return texts,final_news,picw     #,wcd
+# texts_path='data/news.txt'
+# text_deal(texts_path)
+
+gr.Interface(fn=text_deal, inputs='text', outputs=['text','text','image'], capture_session=True).launch(share=True)
 
 
